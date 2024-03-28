@@ -38,5 +38,7 @@
                 }
             }
         ]
-    }
+    },
+    "manifest": "https://raw.githubusercontent.com/adougherty/ai-tools/main/module.json",
+    "download": "https://github.com/adougherty/ai-tools/archive/refs/heads/main.zip"
 }
