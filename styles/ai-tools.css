@@ -1,0 +1,20 @@
+#ai-tools-refresh-image {
+    transition: background-color 2s ease; /* Smooth transition for background color change */
+    position:absolute;
+    top:0px;
+    left:0px;
+    width:17px;
+    height:auto;
+    background-color:white;
+    padding-top:2px;
+    padding-left:2px
+}
+
+.yellow-background {
+    background-color: yellow; /* Initial color */
+}
+  
+.deep-blue-background {
+    background-color: deepskyblue; /* Target color */
+}
+

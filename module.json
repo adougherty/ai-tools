@@ -1,0 +1,42 @@
+{
+    "name": "ai-tools",
+    "title": "AI Tools",
+    "description": "Use AI to quickly and easily manage your games",
+    "version": "1.0.0",
+    "authors": [
+        {
+            "name": "DarthCluck",
+            "url": "https://github.com/DarthCluck",
+            "discord": "DarthCluck",
+            "flags": {}
+        }
+    ],
+    "scripts": [
+        "ai-tools.js"
+    ],
+    "languages": [
+        {
+            "lang": "en",
+            "name": "English",
+            "path": "lang/en.json",
+            "flags": {}
+        }
+    ],
+    "id": "ai-tools",
+    "compatability": {
+        "minimum": "11",
+        "verified": "11"
+    },
+    "relationships": {
+        "requires": [
+            {
+                "id": "lib-wrapper",
+                "type": "module",
+                "compatibility": {
+                    "minimum": "1.0.0.0",
+                    "verified": "1.12.13.0"
+                }
+            }
+        ]
+    }
+}
