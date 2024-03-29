@@ -36,6 +36,5 @@ When making a request to generate an image, information contained in your docume
 3. Place that key into the module settings:
 ![Screenshot 3](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-moduleconfig-01.png)
 
-
-
 ## Does this cost money?
+Kinda/Yes? I, as the module developer do not make any income off this module. However, OpenAI the company that actually does the hard work of creating the images does charge for their services. As of this writing (3/29/2024) OpenAI charges $0.08 USD per image created.
