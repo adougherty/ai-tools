@@ -1,4 +1,8 @@
 # ai-tools
+
+**Important!:** This tool uses the OpenAI API to preform its AI functions. You will need a key from OpenAI to use this tool. OpenAI will change a fee to depending on how much you use the tool.
+
+**The AI-Tools Module does not collect any personal information**, including payment information. All financial arrangements are made between the Gamemaster and OpenAI.
  
 AI-Tools is a collection of tools that use generative ai to create images for your characters and icons. The current features have been implemented:
 * Use Dall-E 3 to create a profile picture for an NPC Actor (and update the corresponding prototype token)
@@ -20,12 +24,10 @@ When the module is installed and enabled, you will find a recycle icon on the to
 
 ![Screenshot 1](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-tokenconfig-01.png)
 
-
-
-
 You will be notified when the process has begun, and when it has concluded. It's that easy!
 
 ## What information is sent?
+
 
 ## How to get an Open AI Key?
 
