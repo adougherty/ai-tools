@@ -22,13 +22,20 @@ When the module is installed and enabled, you will find a recycle icon on the to
 
 ![Screenshot 1](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-abd-01.png)
 
-![Screenshot 1](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-tokenconfig-01.png)
+![Screenshot 2](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-tokenconfig-01.png)
 
 You will be notified when the process has begun, and when it has concluded. It's that easy!
 
 ## What information is sent?
-
+When making a request to generate an image, information contained in your document, and possible associated documents, along with your OpenAI Secret API Key will be sent to the OpenAI servers.
 
 ## How to get an Open AI Key?
+
+1. Go to [https://openai.com] and create an account.
+2. Go to [https://platform.openai.com/api-keys] and create a new secret key
+3. Place that key into the module settings:
+![Screenshot 3](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-moduleconfig-01.png)
+
+
 
 ## Does this cost money?
