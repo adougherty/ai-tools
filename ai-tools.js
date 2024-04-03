@@ -1,3 +1,5 @@
+var aiToolsReady= false;
+
 Hooks.once('init', async function() {
     game.settings.register("ai-tools", "openaiApiKey", {
         name: "OpenAI API Key",
@@ -5,11 +7,17 @@ Hooks.once('init', async function() {
         scope: "world",
         config: true,
         type: String,
-      });
-
-    r = await FilePicker.createDirectory('data', 'ai-images');
+    });
+    game.settings.register("ai-tools", "generateNewTokens", {
+        name: "Generate Images for New Tokens",
+        hint: "Automatically generate images for new tokens when they are placed on the canvas",
+        scope: "world",
+        config: true,
+        type: Boolean,
+    });
 
     console.log("AI-Tools Loaded")
+    //r = await FilePicker.createDirectory('data', 'ai-images');
 });
 
 function uuidv4() {
@@ -100,6 +108,52 @@ Hooks.on('renderItemSheet', (sheet, html) => {
     });
 });
 
+Hooks.on('renderActorSheet', (sheet, html) => {
+    if (!game.user.isGM) return;
+    
+    if (sheet.actor.type === 'npc') {
+        var overlay = createRefreshImageButton(html)[0];
+
+        overlay.on('click', async () => {
+            if (!game.settings.get("ai-tools", "openaiApiKey")) {
+                ui.notifications.error("Please set your OpenAI API key in the settings.");
+                return;
+            }
+            var actor = sheet.actor;
+            var prompt = "";
+            if (actor.flags.aitoolsPrompt) {
+                prompt = actor.flags.aitoolsPrompt;
+            } else {
+                prompt = `A highly detailed and realistic portrait of a ${actor.name}, a ${actor.system.details.type.value} in a fantasy world. It should be depicted standing in its natural environment`;
+                if (actor.system.abilities.str.value > 16) { prompt += ' It is very strong.'; }
+                if (actor.system.abilities.dex.value > 16) { prompt += ' It is very dextrous.'; }
+                if (actor.system.abilities.con.value > 16) { prompt += ' It is very hearty.'; }
+                if (actor.system.abilities.int.value > 16) { prompt += ' It is very intellilgent.'; }
+                if (actor.system.abilities.wis.value > 16) { prompt += ' It is very wise.'; }
+                if (actor.system.abilities.cha.value > 16) { prompt += ' It is very charismatic.'; }
+                let bio = actor.system.details.biography.value.replace(/<[^>]*>?/gm, '');
+                if (bio.length > 0) {
+                    prompt += "\n\n" + actor.system.details.biography.value.replace(/<[^>]*>?/gm, '')
+                }
+            }
+            var data = getOpenAIPromptData(prompt);
+            getNewPortrait(prompt, async (b64) => {
+                const random_uuid = getUUID();
+                await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
+                html.find('.profile')[0].src=`ai-images/${random_uuid}.webp`;
+                actor.update({'prototypeToken.texture.src': `ai-images/${random_uuid}.webp`})
+                actor.update({'img': `ai-images/${random_uuid}.webp`});
+            });
+
+        });
+
+        const tab_biography = html.find('.tab.biography');
+        tab_biography.prepend($(`<h2 style="font-weight:bold;flex: 0 0 auto">Biography</h2>`));
+        tab_biography.append($('<h2 style="font-weight:bold;flex: 0 0 auto">AI Image Creation Instructions</h2>'));
+        tab_biography.append($(`<div style="font-weight:bold;flex: 0 0 auto"><input type="text" name="flags.aitoolsPrompt" style="width:100%" value="${sheet.actor.flags.aitoolsPrompt || ''}" id="aitoolsPrompt" placeholder="A fierce half-orc tracker carrying a magical notebook"></div>`));
+    }
+});
+
 function getNewPortrait(prompt, docUpdateCallBack = () => {}, retry = 0) {
     var nid = ui.notifications.info("Generating new portrait. Please be patient, this could take a few seconds. You will be notified when the image is ready.", {permanent: true});
     console.log(prompt);
@@ -116,7 +170,8 @@ function getNewPortrait(prompt, docUpdateCallBack = () => {}, retry = 0) {
         .then(response => {
             ui.notifications.remove(nid);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                ui.notifications.error("Failed to contact OpenAI servers. Please try again later.");
+                return;
                 if (retry < 3) {
                     ui.notifications.warn("Failed to contact OpenAI severs. Trying again...");
                     getNewPortrait(prompt, docUpdateCallBack, retry + 1);
@@ -137,41 +192,6 @@ function getNewPortrait(prompt, docUpdateCallBack = () => {}, retry = 0) {
         .catch(error => console.error('Error:', error));
 }
 
-Hooks.on('renderActorSheet', (sheet, html) => {
-    if (!game.user.isGM) return;
-    
-    if (sheet.actor.type === 'npc') {
-        var overlay = createRefreshImageButton(html)[0];
-
-        overlay.on('click', async () => {
-            if (!game.settings.get("ai-tools", "openaiApiKey")) {
-                ui.notifications.error("Please set your OpenAI API key in the settings.");
-                return;
-            }
-            var actor = sheet.actor;
-            prompt = `An highly detailed and realistic portrait of a ${actor.name}, a ${actor.system.details.type.value} in a fantasy world. It should be depicted standing in its natural environment`;
-            if (actor.system.abilities.str.value > 16) { prompt += ' It is very strong.'; }
-            if (actor.system.abilities.dex.value > 16) { prompt += ' It is very dextrous.'; }
-            if (actor.system.abilities.con.value > 16) { prompt += ' It is very hearty.'; }
-            if (actor.system.abilities.int.value > 16) { prompt += ' It is very intellilgent.'; }
-            if (actor.system.abilities.wis.value > 16) { prompt += ' It is very wise.'; }
-            if (actor.system.abilities.cha.value > 16) { prompt += ' It is very charismatic.'; }
-            let bio = actor.system.details.biography.value.replace(/<[^>]*>?/gm, '');
-            if (bio.length > 0) {
-                prompt += "\n\n" + actor.system.details.biography.value.replace(/<[^>]*>?/gm, '')
-            }
-            var data = getOpenAIPromptData(prompt);
-            getNewPortrait(prompt, async (b64) => {
-                const random_uuid = getUUID();
-                await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
-                html.find('.profile')[0].src=`ai-images/${random_uuid}.webp`;
-                actor.update({'prototypeToken.texture.src': `ai-images/${random_uuid}.webp`})
-                actor.update({'img': `ai-images/${random_uuid}.webp`});
-            });
-
-        });
-    }
-});
 
 Hooks.on('deleteActor', (actor, options, userid) => {
     if (!game.user.isGM) return;
@@ -206,6 +226,32 @@ function base64ImageToBlob(str) {
     return blob;
 }
 
+function generateTokenImage(token) {
+    console.log(token);
+    if (!game.settings.get("ai-tools", "openaiApiKey")) {
+        ui.notifications.error("Please set your OpenAI API key in the settings.");
+        return;
+    }
+
+    const actor = token.actor;
+    var prompt = `A token for a character in a fantasy world. The token is for use in a virtual tabletop roleplaying game. The token should be a close up of the character's upper body, if possible. The token should be simple enough to be easily recognizable at a small size. The token should be a circle containaing the character's portrait on a white gray background. The portrait should be in full vivid, but realistic color.`;
+    if (actor.flags.aitoolsPrompt) {
+        prompt += "\n\n The following is a more accurate description of what should be inside the ring of the token: " + actor.flags.aitoolsPrompt;
+    }
+
+    let bio = actor.system.details.biography.value.replace(/<[^>]*>?/gm, '');
+    if (bio.length > 0) prompt += "\n\nThe following is the description of what should be inside the ring of the token. You can ignore the mechanics, but draw inspiration of what the item might look like based on the description:\n" + bio
+    getNewPortrait(prompt, async (b64) => {
+        const random_uuid = getUUID();
+        await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
+        token.isUpdating = true;
+        token.update({
+            'texture.src': `ai-images/${random_uuid}.webp`,
+            'flags.aiToolsImage': true
+        })
+    });
+}
+
 Hooks.on('renderTokenConfig', (app, html) => {
     if (!game.user.isGM) return;
 
@@ -213,22 +259,22 @@ Hooks.on('renderTokenConfig', (app, html) => {
     const btn_file = html.find(`button[title="Browse Files"]`);
     AiToolsButton.click(async (e) => {
         e.preventDefault();
-        if (!game.settings.get("ai-tools", "openaiApiKey")) {
-            ui.notifications.error("Please set your OpenAI API key in the settings.");
-            return;
-        }
-    
-        const token = app.object;
-        const actor = token.actor;
-        prompt = `A token for a ${actor.name} in a fantasy world. The token is for use in a virtual tabletop roleplaying game. The token should be a close up of the character's upper body, if possible. The token should be simple enough to be easily recognizable at a small size. The token should be a circle containaing the character's portrait on a white gray background. The portrait should be in full vivid, but realistic color.`;
-        let bio = actor.system.details.biography.value.replace(/<[^>]*>?/gm, '');
-        if (bio.length > 0) prompt += "\n\nThe following is the description of the item as used for a role playing game. You can ignore the mechanics, but draw inspiration of what the item might look like based on the description:\n" + bio
         btn_file.prop('disabled', true);
-        getNewPortrait(prompt, async (b64) => {
-            const random_uuid = getUUID();
-            await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
-            token.update({'texture.src': `ai-images/${random_uuid}.webp`});
-        });
-    } );
+        generateTokenImage(app.object);
+    });
     btn_file.before(AiToolsButton);
-})
+});
+
+Hooks.on('ready', () => {
+    aiToolsReady = true;
+    console.log("AI-Tools Ready");
+});
+
+Hooks.on('drawToken', (token) => {
+    if (token.document.flags.aiToolsImage && token.document.flags.aiToolsImage === true) return;
+    if (!game.user.isGM) return;
+    if (!aiToolsReady) return;
+    if (!game.settings.get("ai-tools", "generateNewTokens")) return;
+    generateTokenImage(token.document);
+
+});
