@@ -24,6 +24,8 @@ When the module is installed and enabled, you will find a recycle icon on the to
 
 ![Screenshot 2](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-tokenconfig-01.png)
 
+![Screenshot 1](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-tokens-01.png) ![Screenshot 1](https://raw.githubusercontent.com/adougherty/ai-tools/main/.github/images/ss-tokens-02.png)
+
 You will be notified when the process has begun, and when it has concluded. It's that easy!
 
 ## What information is sent?
