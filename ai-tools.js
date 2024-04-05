@@ -15,9 +15,29 @@ Hooks.once('init', async function() {
         config: true,
         type: Boolean,
     });
+    game.settings.register("ai-tools", "hd", {
+        name: "Generate HD Images",
+        hint: "HD images have higher quality and consistency, but cost more.",
+        scope: "world",
+        config: true,
+        type: Boolean,
+    });
+
+    game.settings.register("ai-tools", "style", {
+        name: "Image Style:",
+        hint: "The style of the generated images. Must be one of vivid or natural. Vivid causes the model to lean towards generating hyper-real and dramatic images. Natural causes the model to produce more natural, less hyper-real looking images",
+        scope: "world",
+        config: true,
+        type: String,
+        choices: {
+            "vivid": "Vivid",
+            "natural": "Natural"
+        },
+        default: "vivid"
+    });
 
     console.log("AI-Tools Loaded")
-    //r = await FilePicker.createDirectory('data', 'ai-images');
+    r = await FilePicker.createDirectory('data', 'ai-images');
 });
 
 function uuidv4() {
@@ -39,12 +59,16 @@ function createRefreshImageButton(html) {
 }
 
 function getOpenAIPromptData(prompt) {
+    let quality = game.settings.get("ai-tools", "hd") ? "hd" : "standard";
+    let style = game.settings.get("ai-tools", "style");
     return {
         "model": "dall-e-3",
         "prompt": prompt,
         "n": 1,
         "size": "1024x1024",
-        "response_format": "b64_json"
+        "response_format": "b64_json",
+        "quality": quality,
+        "style": style
     };    
 }
 
@@ -90,21 +114,23 @@ Hooks.on('renderItemSheet', (sheet, html) => {
         console.log(sheet);
         var item = sheet.item;
         console.log(item);
-        prompt = `Simple but realistic icon for a ${item.type} called ${item.name}. The icon should large and fill the image.`;
+        prompt = `minimalistic icon for a ${item.type} called ${item.name}.`;
         if (item.system.type.value === 'natural') {
             prompt += ` It is a natural weapon or a part of the body of a creature`;
         }
+        /*
         let desc = item.system.description.value.replace(/<[^>]*>?/gm, '');
         if (desc.length > 0) {
             prompt += "\n\nThe following is the description of the item as used for a role playing game. You can ignore the mechanics, but draw inspiration of what the item might look like based on the description." + desc
         }
+        */
         getNewPortrait(prompt, async (b64) => {
             const random_uuid = getUUID();
             await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
             html.find('.profile')[0].src=`ai-images/${random_uuid}.webp`;
             item.update({'prototypeToken.texture.src': `ai-images/${random_uuid}.webp`})
             item.update({'img': `ai-images/${random_uuid}.webp`});
-        });
+        }, 0, {quality:'standard', style: 'natural'});
     });
 });
 
@@ -154,11 +180,19 @@ Hooks.on('renderActorSheet', (sheet, html) => {
     }
 });
 
-function getNewPortrait(prompt, docUpdateCallBack = () => {}, retry = 0) {
+function getNewPortrait(prompt, docUpdateCallBack = () => {}, retry = 0, options = {}) {
     var nid = ui.notifications.info("Generating new portrait. Please be patient, this could take a few seconds. You will be notified when the image is ready.", {permanent: true});
+
     console.log(prompt);
+
     const data = getOpenAIPromptData(prompt);
+    if (options.style) data.style = options.style;
+    if (options.quality) data.quality = options.quality;
+    console.log(options)
+    console.log(data);
+
     var interval = startInProgress();
+    
     fetch("https://api.openai.com/v1/images/generations", {
         method: "POST",
         headers: {
@@ -234,13 +268,15 @@ function generateTokenImage(token) {
     }
 
     const actor = token.actor;
-    var prompt = `A token for a character in a fantasy world. The token is for use in a virtual tabletop roleplaying game. The token should be a close up of the character's upper body, if possible. The token should be simple enough to be easily recognizable at a small size. The token should be a circle containaing the character's portrait on a white gray background. The portrait should be in full vivid, but realistic color.`;
+    var prompt = `A 2-dimensional top-down token for an NPC called "${actor.name}" in a fantasy world.` + 
+        `The token is a wooden ring containing a portrait of the character. The portrait should be a vivid, but realistic color. ` +
+        `The background of the image should be a single color, and the token should be centered in the image. `;
     if (actor.flags.aitoolsPrompt) {
         prompt += "\n\n The following is a more accurate description of what should be inside the ring of the token: " + actor.flags.aitoolsPrompt;
     }
 
     let bio = actor.system.details.biography.value.replace(/<[^>]*>?/gm, '');
-    if (bio.length > 0) prompt += "\n\nThe following is the description of what should be inside the ring of the token. You can ignore the mechanics, but draw inspiration of what the item might look like based on the description:\n" + bio
+    if (bio.length > 0) prompt += "\n\nThe following was provided as the biography of the NPC. You can ignore the mechanics, but draw inspiration of what the character might look like based on the description:\n" + bio
     getNewPortrait(prompt, async (b64) => {
         const random_uuid = getUUID();
         await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
