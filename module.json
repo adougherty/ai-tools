@@ -23,7 +23,7 @@
         }
     ],
     "id": "ai-tools",
-    "compatability": {
+    "compatibility": {
         "minimum": "11",
         "verified": "11"
     },
