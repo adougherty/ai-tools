@@ -376,3 +376,39 @@ Hooks.on('drawToken', (token) => {
     if (!game.settings.get("ai-tools", "generateNewTokens")) return;
     generateTokenImage(token.document);
 });
+
+// Define Hooks to Montior
+const watchedHooks = ['ActorSheet']
+// Loop through hooks and attach header button and listener
+watchedHooks.forEach(hook => {
+    Hooks.on(`get${hook}HeaderButtons`, attachHeaderButton);
+    Hooks.on(`render${hook}`, updateHeaderButton);
+});
+
+function attachHeaderButton(app, buttons) {
+    if (!game.user.isGM) return;
+
+    buttons.unshift({
+        class: "ai-tools-button",
+        get icon() {
+            // Get GM Notes
+            return `fa-solid fa-robot`;
+        },
+        onclick: (ev) => {
+            console.log("AI-Tools Button Clicked");
+            actor = app.object;
+            let prompt = `A highly detailed and realistic portrait of a ${actor.name}, a ${actor.system.details.type.value} in a fantasy world. It should be depicted standing in its natural environment`;
+            if (actor.flags.aitoolsPrompt) {
+                prompt = actor.flags.aitoolsPrompt;
+            }
+            getNewPortrait(prompt, async (b64) => {
+                const random_uuid = getUUID();
+                await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
+                actor.update({'prototypeToken.texture.src': `ai-images/${random_uuid}.webp`})
+                actor.update({'img': `ai-images/${random_uuid}.webp`});
+            });
+       },
+    });
+
+
+}
