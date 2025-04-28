@@ -3,7 +3,7 @@ var aiToolsReady= false;
 Hooks.once('init', async function() {
     game.settings.register("ai-tools", "openaiApiKey", {
         name: "OpenAI API Key",
-        hint: "Get one from openai.com. This is required to generate images using OpenAI's DallE-3 model. As of April 21, 2024, A standard image costs $0.04 USD and an HD image costs $0.08 USD. (Charged by OpenAI)",
+        hint: "Get one from openai.com. This is required to generate images using OpenAI's OpenAI model. As of April 21, 2024, A standard image costs $0.04 USD and an HD image costs $0.08 USD. (Charged by OpenAI)",
         scope: "world",
         config: true,
         type: String,
@@ -23,24 +23,18 @@ Hooks.once('init', async function() {
         type: Boolean,
     });
 
-    game.settings.register("ai-tools", "hd", {
-        name: "Generate HD Images (DallE-3)",
-        hint: "HD images have higher quality and consistency, but cost more.",
-        scope: "world",
-        config: true,
-        type: Boolean,
-    });
-    game.settings.register("ai-tools", "style", {
-        name: "Image Style (DallE-3):",
-        hint: "The style of the generated images. Must be one of vivid or natural. Vivid causes the model to lean towards generating hyper-real and dramatic images. Natural causes the model to produce more natural, less hyper-real looking images",
+    game.settings.register("ai-tools", "imageQuality", {
+        name: "Image Quality (OpenAI):",
+        hint: "The quality of the generated images. Low is faster but less detailed, HD is highest quality but costs more.",
         scope: "world",
         config: true,
         type: String,
         choices: {
-            "vivid": "Vivid",
-            "natural": "Natural"
+            "low": "Low",
+            "standard": "Standard",
+            "hd": "HD"
         },
-        default: "vivid"
+        default: "standard"
     });
 
     game.settings.register("ai-tools", "service-token", {
@@ -50,7 +44,7 @@ Hooks.once('init', async function() {
         config: true,
         type: String,
         choices: {
-            "openai": "DallE-3",
+            "openai": "OpenAI",
             "sd3": "Stable Diffusion 3"
         },
     });
@@ -86,13 +80,12 @@ function createRefreshImageButton(html) {
 }
 
 function getOpenAIPromptData(prompt) {
-    let quality = game.settings.get("ai-tools", "hd") ? "hd" : "standard";
-    let style = game.settings.get("ai-tools", "style");
     return {
         "model": "gpt-image-1",
         "prompt": prompt,
         "n": 1,
-        "size": "1024x1024"
+        "size": "1024x1024",
+        "quality": game.settings.get("ai-tools", "imageQuality")
     };    
 }
 
