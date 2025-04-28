@@ -50,7 +50,7 @@ Hooks.once('init', async function() {
         config: true,
         type: String,
         choices: {
-            "openai": "OpenAI",
+            "openai": "DallE-3",
             "sd3": "Stable Diffusion 3"
         },
     });
@@ -89,13 +89,10 @@ function getOpenAIPromptData(prompt) {
     let quality = game.settings.get("ai-tools", "hd") ? "hd" : "standard";
     let style = game.settings.get("ai-tools", "style");
     return {
-        "model": "dall-e-3",
+        "model": "gpt-image-1",
         "prompt": prompt,
         "n": 1,
-        "size": "1024x1024",
-        "response_format": "b64_json",
-        "quality": quality,
-        "style": style
+        "size": "1024x1024"
     };    
 }
 
@@ -253,10 +250,22 @@ function getNewPortrait(prompt, docUpdateCallBack = () => {}, retry = 0, options
 
     console.log(prompt);
 
-    const data = (options.type=='token' && game.settings.get("ai-tools", "service-token") === 'sd3') ? getSD3PromptData(prompt) : getOpenAIPromptData(prompt);
+    let data;
+    if (options.type=='token' && game.settings.get("ai-tools", "service-token") === 'sd3') {
+        data = getSD3PromptData(prompt);
+    } else {
+        data = getOpenAIPromptData(prompt);
+    }
+
     var interval = startInProgress();
+
+    let promise;
     console.log(game.settings.get("ai-tools", "service-token"));
-    let promise = (options.type=='token' && game.settings.get("ai-tools", "service-token") === 'sd3') ? fetchFromSD3(data, docUpdateCallBack, nid, retry) : fetchFromOpenAI(data, docUpdateCallBack, nid, retry);
+    if (game.settings.get("ai-tools", "service-token") === 'sd3') {
+        promise = fetchFromSD3(data, docUpdateCallBack, nid, retry);
+    } else {
+        promise = fetchFromOpenAI(data, docUpdateCallBack, nid, retry);
+    }
     promise.then(response => {
         ui.notifications.remove(nid);
         if (!response.ok) {
@@ -397,15 +406,23 @@ function attachHeaderButton(app, buttons) {
         onclick: (ev) => {
             console.log("AI-Tools Button Clicked");
             actor = app.object;
-            let prompt = `A highly detailed and realistic portrait of a ${actor.name}, a ${actor.system.details.type.value} in a fantasy world. It should be depicted standing in its natural environment`;
+            let prompt = `An token image of a "${actor.name}", It should be depicted standing in its natural environment. The token should contain a ring around the character, a no text`;
             if (actor.flags.aitoolsPrompt) {
                 prompt = actor.flags.aitoolsPrompt;
             }
             getNewPortrait(prompt, async (b64) => {
                 const random_uuid = getUUID();
-                await ImageHelper.uploadBase64(b64, `${random_uuid}.webp`, 'ai-images')
-                actor.update({'prototypeToken.texture.src': `ai-images/${random_uuid}.webp`})
-                actor.update({'img': `ai-images/${random_uuid}.webp`});
+                const fileName = `${random_uuid}.webp`;
+                const filePath = `ai-images/${fileName}`;
+                // Upload the generated image
+                await ImageHelper.uploadBase64(b64, fileName, 'ai-images');
+                // Only update the currently controlled token of this actor, not all tokens
+                const controlledToken = canvas.tokens.controlled.find(t => t.actor?.id === actor.id);
+                if (controlledToken) {
+                    await controlledToken.document.update({ "texture.src": filePath });
+                } else {
+                    console.warn(`AI-Tools: No controlled token found for actor ${actor.name}. Image uploaded but not applied.`);
+                }
             });
        },
     });
